@@ -41,7 +41,7 @@ plt.yticks(range(int(x_0) + 1))
 V = {k: {x: np.inf for x in states} for k in range(1, Khorizon)}
 V[0] = {x_0: np.inf}                                                    # V[0] only contains the initial state x_0
 V[1] = {x: np.inf for x in states if x != 0.2}                          # V[1] does not contain the state 0.2
-V[Khorizon] = {0: 0}                                                    # Terminal condition
+V[Khorizon] = {0: 0}                                                    # Terminal state
 
 # Main loop through k values
 for k in range(Khorizon - 1, -1, -1):
@@ -58,13 +58,13 @@ for k in range(Khorizon - 1, -1, -1):
     for x in x_values:
         if k == Khorizon - 1:
             x_next = 0
-            cost = transition_cost(x, -x)  
+            cost = transition_cost(x, -x)
             if x in [0, 1, 2]:
                 V[k][x] = cost
             elif x in [0.2, 0.4]:
-                V[k][x] = V[k][0] + (V[k][1]-V[k][0]) * x 
+                V[k][x] = V[k][0] + (V[k][1]-V[k][0]) * x
             elif x in [1.2]:
-                V[k][x] = V[k][1] + (V[k][2] - V[k][1]) * (x -1)                                     
+                V[k][x] = V[k][1] + (V[k][2] - V[k][1]) * (x -1)
             plt.plot([k, k + 1], [x, x_next], 'b--')
             plt.plot(k + 1, x_next, 'bo')
             plt.text(k + 0.5, x / 2, f"{cost:.2f}", color='red')
@@ -72,13 +72,13 @@ for k in range(Khorizon - 1, -1, -1):
             u_values = u_steps.get(x, [0])
             for u in u_values:
                 x_next = dynamics(x, u)
-                x_next = nearest_state(x_next, states)
+                x_next = nearest_state(x_next, states)         # Ensure the next state is valid
                 cost = transition_cost(x, u)
                 if V[k+1][x_next] + cost < V[k][x]:
                   if x in [0, 1, 2]:
                     V[k][x] = V[k+1][x_next] + cost
                   elif x in [0.2, 0.4]:
-                    V[k][x] = V[k][0] + (V[k][1]-V[k][0]) * x                                    # Lnear interpolation for red states
+                    V[k][x] = V[k][0] + (V[k][1]-V[k][0]) * x
                   elif x in [1.2]:
                     V[k][x] = V[k][1] + (V[k][2] - V[k][1]) * (x -1)
                 color = 'bo' if x_next in [0, 1, 2] else 'ro'
@@ -95,21 +95,21 @@ current_state = x_0
 
 # Plotting the optimal path with feasible transitions
 for k in range(Khorizon):
-    if current_state not in u_steps:
-        break                                                                                   # If no more controls are available, break out of the loop
-    
+    if current_state not in u_steps:                         # If no more controls are available, break out of the loop
+        break
+
     feasible_transitions = {}
     for u in u_steps[current_state]:
         if k == 3:
             next_state = dynamics(current_state, - current_state)
         else:
             next_state = dynamics(current_state, u)
-        next_state = nearest_state(next_state, states)                                           # Ensure the next state is valid
-        if next_state in V[k+1]:                                                                 # Check if the next state is part of the valid future states
+        next_state = nearest_state(next_state, states)
+        if next_state in V[k+1]:                                                   # Check if the next state is part of the valid future states
             feasible_transitions[next_state] = V[k+1][next_state]
-    
-    if not feasible_transitions:                                                                 # If no feasible transitions, break out of the loop
-        break                                                                                    
+
+    if not feasible_transitions:                         # If no feasible transitions, break out of the loop
+        break
 
     # Select the state with the minimum cost-to-go from the feasible transitions
     next_state = min(feasible_transitions, key=feasible_transitions.get)
@@ -121,21 +121,22 @@ for k in range(Khorizon):
         plt.plot([k, k+1], [optimal_path[-2], 0], 'r->', linewidth=2, label='Optimal Path' if k == 0 else "")
     else:
         plt.plot([k, k+1], [optimal_path[-2], optimal_path[-1]], 'r->', linewidth=2, label='Optimal Path' if k == 0 else "")
-    
+
 
 
 plt.legend()
 plt.show()
 
 
-print("Optimal path:", ' -> '.join(map(str, optimal_path)))
+print("\nOptimal path:", ' -> '.join(map(str, optimal_path)))
+print(f"Minimum cost-to-go from initial state x_0 = {x_0}: {V[0][x_0]:.2f}")
+print("\n----------------------------------------------------------")
 
-
-# Print the entire dictionary V in a readable format
+# Print the entire dictionary V
 for k in sorted(V.keys()):
     print(f"Time step {k}:")
     for x in sorted(V[k].keys()):
         print(f"  State {x}: Cost-to-go = {V[k][x]:.2f}")
-    print()     
+    print()
 
-print(f"Minimum cost-to-go from initial state x_0 = {x_0}: {V[0][x_0]:.2f}")
+
